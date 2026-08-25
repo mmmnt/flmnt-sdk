@@ -1,0 +1,40 @@
+{
+  "$schema": "https://mmmnt.dev/feat/contract.schema.json",
+  "specId": "SPEC-SDK-002",
+  "schemas": {
+    "AcquireTokenInput": {
+      "type": "object",
+      "required": ["apiKey"],
+      "properties": { "apiKey": { "type": "string" } },
+      "additionalProperties": false
+    },
+    "TokenHandle": {
+      "type": "object",
+      "required": ["accessToken", "expiresIn"],
+      "properties": {
+        "accessToken": { "type": "string" },
+        "expiresIn": { "const": 900 }
+      },
+      "additionalProperties": false
+    },
+    "WireCall": {
+      "type": "object",
+      "required": ["method", "path"],
+      "properties": {
+        "method": { "type": "string" },
+        "path": { "type": "string" },
+        "body": { "type": "object" }
+      },
+      "additionalProperties": false
+    },
+    "SdkError": {
+      "type": "object",
+      "required": ["code", "message"],
+      "properties": {
+        "code": { "enum": ["SDK_KEY_MALFORMED", "SDK_EXCHANGE_REFUSED", "SDK_GRAPH_REFUSED", "SDK_NETWORK"] },
+        "message": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

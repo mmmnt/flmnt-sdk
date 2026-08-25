@@ -1,0 +1,78 @@
+feat 1.0
+
+spec SPEC-SDK-003 "The transport reads the body regardless of status and surfaces the router's own words"
+context Sdk
+aggregate Transport
+type command
+status agreed
+
+construct:
+  handler at features/graph-transport/handler.ts
+  touches features/**
+  touches src/**
+  needs SPEC-SDK-002
+  QueryMemory is the SDK's single GraphQL POST path against the router; every typed method
+  (reads, writes, retrieval — SPEC-SDK-004, not yet authored) goes through it. It ports the
+  MCP GraphqlClient semantics: the router returns GraphQL-shaped { errors } bodies WITH 401/403
+  statuses, so the body is parsed regardless of HTTP status.
+
+enforce:
+  A GraphQL { errors } body becomes a typed refusal carrying the router's joined messages —
+  never a bare status, never fabricated words.
+  On a 401 the transport re-exchanges the API key exactly once and replays the call; a second
+  401 surfaces as the refusal. Refusals (403 and other GraphQL errors) are never retried.
+  Network errors are retried; GraphQL errors are answers.
+  rejects SDK_GRAPH_REFUSED when the router's body carries errors
+  A wire that dies after its retry is a SYSTEM failure, not an answer — it surfaces as the
+  SDK_NETWORK error, never as a fabricated refusal.
+
+contract:
+  input QueryMemoryInput
+  response GraphResult
+  record WireCall
+  error SdkError
+
+scenario "a successful query returns data and one wire call":
+  given:
+    execute (as anonymous) AcquireToken { apiKey: "flmnt_sk_conn_sib1.s3cr3t-value_x" }
+  when (as anonymous): QueryMemory { document: "query { memoryStreams(projectId: \"ws-sibling\") { streamId } }" }
+  predict success:
+    response 200 GraphResult { data: any }
+    wire has [http.request with WireCall { method: "POST", path: "/graphql" }]
+
+scenario "a 403 with a GraphQL body surfaces the router's words unretried":
+  given:
+    execute (as anonymous) AcquireToken { apiKey: "flmnt_sk_conn_sib1.s3cr3t-value_x" }
+    seed wire [wire.stub with WireCall { method: "STUB", path: "/graphql", body: { status: 403, errors: ["forbidden"] } }]
+  when (as anonymous): QueryMemory { document: "query { memoryStreams(projectId: \"ws-other\") { streamId } }" }
+  predict rejection SDK_GRAPH_REFUSED:
+    response 403 SdkError { code: "SDK_GRAPH_REFUSED", message: matching "forbidden" }
+    wire has [http.request with WireCall { method: "POST", path: "/graphql" }]
+
+scenario "a 401 re-exchanges once and replays":
+  given:
+    execute (as anonymous) AcquireToken { apiKey: "flmnt_sk_conn_sib1.s3cr3t-value_x" }
+    seed wire [wire.stub with WireCall { method: "STUB", path: "/graphql", body: { status: 401, once: true, errors: ["unauthenticated"] } }]
+    The stub answers the FIRST /graphql call 401 and subsequent calls 200 — the expired-token
+    shape one minute past exp.
+  when (as anonymous): QueryMemory { document: "query { memoryStreams(projectId: \"ws-sibling\") { streamId } }" }
+  predict success:
+    response 200 GraphResult { data: any }
+    wire has [
+      http.request with WireCall { method: "POST", path: "/graphql" },
+      http.request with WireCall { method: "POST", path: "/token" },
+      http.request with WireCall { method: "POST", path: "/graphql" }
+    ]
+
+scenario "a wire that dies twice surfaces as a network error":
+  given:
+    execute (as anonymous) AcquireToken { apiKey: "flmnt_sk_conn_sib1.s3cr3t-value_x" }
+    seed wire [wire.stub with WireCall { method: "STUB", path: "/graphql", body: { networkFailure: true } }]
+    The stub makes every /graphql attempt fail at the socket — no HTTP answer at all.
+  when (as anonymous): QueryMemory { document: "query { memoryStreams(projectId: \"ws-sibling\") { streamId } }" }
+  predict error SDK_NETWORK:
+    response 502 SdkError { code: "SDK_NETWORK" }
+    wire has [
+      http.request with WireCall { method: "POST", path: "/graphql" },
+      http.request with WireCall { method: "POST", path: "/graphql" }
+    ]

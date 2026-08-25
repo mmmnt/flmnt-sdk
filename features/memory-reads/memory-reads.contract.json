@@ -1,0 +1,17 @@
+{
+  "$schema": "https://mmmnt.dev/feat/contract.schema.json",
+  "specId": "SPEC-SDK-004",
+  "schemas": {
+    "StreamsArgs": { "type": "object", "required": ["projectId"], "properties": { "projectId": { "type": "string" } }, "additionalProperties": false },
+    "StreamArgs": { "type": "object", "required": ["streamId"], "properties": { "streamId": { "type": "string" } }, "additionalProperties": false },
+    "EntriesArgs": { "type": "object", "required": ["streamId"], "properties": { "streamId": { "type": "string" }, "limit": { "type": "number" } }, "additionalProperties": false },
+    "SearchArgs": { "type": "object", "required": ["streamId", "query"], "properties": { "streamId": { "type": "string" }, "query": { "type": "string" } }, "additionalProperties": false },
+    "SliceArgs": { "type": "object", "required": ["streamId"], "properties": { "streamId": { "type": "string" }, "startPos": { "type": "number" }, "endPos": { "type": "number" }, "startTime": { "type": "string" }, "endTime": { "type": "string" } }, "additionalProperties": false },
+    "NeighborhoodArgs": { "type": "object", "required": ["streamId", "entryId"], "properties": { "streamId": { "type": "string" }, "entryId": { "type": "string" }, "depth": { "type": "number" } }, "additionalProperties": false },
+    "KeyframeArgs": { "type": "object", "required": ["streamId"], "properties": { "streamId": { "type": "string" }, "position": { "type": "number" } }, "additionalProperties": false },
+    "PlanArgs": { "type": "object", "required": ["streamId"], "properties": { "streamId": { "type": "string" }, "position": { "type": "number" } }, "additionalProperties": false },
+    "SdkResult": { "type": "object", "required": ["result"], "properties": { "result": {} }, "additionalProperties": false },
+    "WireCall": { "type": "object", "required": ["method", "path"], "properties": { "method": { "type": "string" }, "path": { "type": "string" }, "body": { "type": "object" } }, "additionalProperties": false },
+    "SdkError": { "type": "object", "required": ["code", "message"], "properties": { "code": { "enum": ["SDK_KEY_MALFORMED", "SDK_EXCHANGE_REFUSED", "SDK_GRAPH_REFUSED", "SDK_NETWORK"] }, "message": { "type": "string" } }, "additionalProperties": false }
+  }
+}

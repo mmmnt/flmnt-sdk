@@ -1,0 +1,56 @@
+feat 1.0
+
+spec SPEC-SDK-002 "The SDK exchanges once and rides the cache until the token nears expiry"
+context Sdk
+aggregate TokenCache
+type command
+status agreed
+
+construct:
+  handler at features/acquire-token/handler.ts
+  touches features/**
+  touches src/**
+  needs SPEC-SDK-001
+  AcquireToken performs the client_credentials exchange against the broker token endpoint and
+  caches the result in memory until exp minus a 60-second skew. Outbound calls are recorded on
+  the wire surface as { method, path, body } — the wire IS the behavior under test.
+  Connection tokens carry no refresh token; renewal is always a fresh exchange (QRM-ADR-002).
+
+enforce:
+  Within the cache window no second exchange is made — a busy client must not hammer /token.
+  A broker refusal surfaces the broker's own error, never a fabricated one, and is not retried:
+  invalid_client is an answer, and retrying repeats it faster.
+  rejects SDK_EXCHANGE_REFUSED when the broker answers with an OAuth error
+
+contract:
+  input AcquireTokenInput
+  response TokenHandle
+  record WireCall
+  error SdkError
+
+scenario "the first acquisition exchanges at the broker":
+  when (as anonymous): AcquireToken { apiKey: "flmnt_sk_conn_sib1.s3cr3t-value_x" }
+  predict success:
+    response 200 TokenHandle { accessToken: any string, expiresIn: 900 }
+    wire has [http.request with WireCall {
+      method: "POST", path: "/token",
+      body: { grant_type: "client_credentials", client_id: "conn_sib1", client_secret: "s3cr3t-value_x" }
+    }]
+
+scenario "a cached token is not re-exchanged":
+  given:
+    execute (as anonymous) AcquireToken { apiKey: "flmnt_sk_conn_sib1.s3cr3t-value_x" }
+  when (as anonymous): AcquireToken { apiKey: "flmnt_sk_conn_sib1.s3cr3t-value_x" }
+  predict success:
+    response 200 TokenHandle { accessToken: any string, expiresIn: 900 }
+    wire has []
+
+scenario "a revoked key's refusal carries the broker's answer":
+  given:
+    seed wire [wire.stub with WireCall { method: "STUB", path: "/token", body: { status: 401, error: "invalid_client" } }]
+    The seeded stub instructs the fake transport to answer the next /token call with 401
+    invalid_client — the shape a revoked or unknown key produces.
+  when (as anonymous): AcquireToken { apiKey: "flmnt_sk_conn_dead.s3cr3t-value_x" }
+  predict rejection SDK_EXCHANGE_REFUSED:
+    response 401 SdkError { code: "SDK_EXCHANGE_REFUSED", message: matching "invalid_client" }
+    wire has [http.request with WireCall { method: "POST", path: "/token", body: { grant_type: "client_credentials", client_id: "conn_dead", client_secret: "s3cr3t-value_x" } }]

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://mmmnt.dev/feat/contract.schema.json",
+  "specId": "SPEC-SDK-005",
+  "schemas": {
+    "RecordEntryArgs": { "type": "object", "required": ["streamId", "content", "kind"], "properties": { "streamId": { "type": "string" }, "content": { "type": "string" }, "kind": { "enum": ["decision", "exploration"] }, "causalRefs": { "type": "array", "items": { "type": "string" } } }, "additionalProperties": false },
+    "KeyframeWriteArgs": { "type": "object", "required": ["streamId", "content"], "properties": { "streamId": { "type": "string" }, "content": { "type": "string" }, "causalRefs": { "type": "array", "items": { "type": "string" } } }, "additionalProperties": false },
+    "MistakeArgs": { "type": "object", "required": ["workspaceId", "content"], "properties": { "workspaceId": { "type": "string" }, "content": { "type": "string" }, "wasCorrected": { "type": "boolean" }, "targetEntryId": { "type": "string" }, "corrects": { "type": "string" } }, "additionalProperties": false },
+    "SupersessionArgs": { "type": "object", "required": ["streamId", "content", "supersedes"], "properties": { "streamId": { "type": "string" }, "content": { "type": "string" }, "supersedes": { "type": "string" } }, "additionalProperties": false },
+    "PlanWriteArgs": { "type": "object", "required": ["streamId", "content"], "properties": { "streamId": { "type": "string" }, "content": { "type": "string" } }, "additionalProperties": false },
+    "MetricArgs": { "type": "object", "required": ["streamId", "metricName", "value"], "properties": { "streamId": { "type": "string" }, "metricName": { "type": "string" }, "value": { "type": "number" }, "labels": { "type": "object" } }, "additionalProperties": false },
+    "CreateStreamArgs": { "type": "object", "required": ["projectId", "streamType", "name"], "properties": { "projectId": { "type": "string" }, "streamType": { "type": "string" }, "name": { "type": "string" }, "sessionId": { "type": "string" } }, "additionalProperties": false },
+    "SdkResult": { "type": "object", "required": ["result"], "properties": { "result": {} }, "additionalProperties": false },
+    "WireCall": { "type": "object", "required": ["method", "path"], "properties": { "method": { "type": "string" }, "path": { "type": "string" }, "body": { "type": "object" } }, "additionalProperties": false },
+    "SdkError": { "type": "object", "required": ["code", "message"], "properties": { "code": { "enum": ["SDK_KEY_MALFORMED", "SDK_EXCHANGE_REFUSED", "SDK_GRAPH_REFUSED", "SDK_NETWORK"] }, "message": { "type": "string" } }, "additionalProperties": false }
+  }
+}

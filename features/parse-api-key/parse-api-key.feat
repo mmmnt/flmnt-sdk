@@ -1,0 +1,43 @@
+feat 1.0
+
+spec SPEC-SDK-001 "The composite key splits into client credentials, or refuses loudly"
+context Sdk
+aggregate ApiKey
+type command
+status agreed
+
+construct:
+  handler at features/parse-api-key/handler.ts
+  touches features/**
+  touches src/**
+  The @mmmnt/flmnt-sdk SDK accepts one opaque string flmnt_sk_{connectionId}.{secret}
+  (QRM-ADR-002 section 1) and splits it into the OAuth client_id / client_secret pair the
+  broker exchange expects. Customers never handle two values.
+
+enforce:
+  A malformed key fails at construction time, before any network call — a key that cannot
+  parse must never reach the broker.
+  rejects SDK_KEY_MALFORMED when the string does not match flmnt_sk_{connectionId}.{secret}
+
+contract:
+  input ParseApiKeyInput
+  response ParsedKey
+  error SdkError
+
+scenario "a well-formed key yields its credential pair":
+  when (as anonymous): ParseApiKey { apiKey: "flmnt_sk_conn_sib1.s3cr3t-value_x" }
+  predict success:
+    response 200 ParsedKey { clientId: "conn_sib1", clientSecret: "s3cr3t-value_x" }
+    wire has []
+
+scenario "a key without a secret part is refused before the wire":
+  when (as anonymous): ParseApiKey { apiKey: "flmnt_sk_conn_sib1" }
+  predict rejection SDK_KEY_MALFORMED:
+    response 400 SdkError { code: "SDK_KEY_MALFORMED" }
+    wire has []
+
+scenario "a foreign prefix is refused before the wire":
+  when (as anonymous): ParseApiKey { apiKey: "sk_live_abcdef.123" }
+  predict rejection SDK_KEY_MALFORMED:
+    response 400 SdkError { code: "SDK_KEY_MALFORMED" }
+    wire has []

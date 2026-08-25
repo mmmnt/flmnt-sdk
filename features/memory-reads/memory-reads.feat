@@ -1,0 +1,107 @@
+feat 1.0
+
+spec SPEC-SDK-004 "Every typed read builds its router operation and passes the field through untouched"
+context Sdk
+aggregate Memory
+type command
+status agreed
+
+construct:
+  handler at features/memory-reads/handler.ts
+  touches features/**
+  touches src/**
+  needs SPEC-SDK-003
+  The typed read surface mirrors the MCP's read tools one-for-one over the router GraphQL
+  (QRM-ADR-002 §8): each method builds its operation document, rides SPEC-SDK-003's transport
+  (auth, one 401 re-exchange, refusals in the router's words), and returns the operation's
+  field value UNTOUCHED — shapes belong to the router schema, never reshaped client-side.
+  The fake wire's graph stubs answer with a body.data payload so passthrough is assertable.
+
+enforce:
+  A method never reshapes, filters, or renames what the router answered — result is the
+  operation's field value verbatim.
+  Auth and refusal behavior are SPEC-SDK-003's law and are not re-specified per method.
+
+contract:
+  input StreamsArgs
+  input StreamArgs
+  input EntriesArgs
+  input SearchArgs
+  input SliceArgs
+  input NeighborhoodArgs
+  input KeyframeArgs
+  input PlanArgs
+  response SdkResult
+  record WireCall
+
+scenario "listStreams rides memoryStreams and passes the field through":
+  given:
+    execute (as anonymous) AcquireToken { apiKey: "flmnt_sk_conn_sib1.s3cr3t-value_x" }
+    seed wire [wire.stub with WireCall { method: "STUB", path: "/graphql", body: { status: 200, data: { memoryStreams: [{ streamId: "ws-sibling::domain" }] } } }]
+  when (as anonymous): ListStreams { projectId: "ws-sibling" }
+  predict success:
+    response 200 SdkResult { result: [{ streamId: "ws-sibling::domain" }] }
+    wire has [http.request with WireCall { method: "POST", path: "/graphql", body: { query: matching "memoryStreams" } }]
+
+scenario "getStreamMetadata rides memoryStream":
+  given:
+    execute (as anonymous) AcquireToken { apiKey: "flmnt_sk_conn_sib1.s3cr3t-value_x" }
+    seed wire [wire.stub with WireCall { method: "STUB", path: "/graphql", body: { status: 200, data: { memoryStream: { streamId: "ws-sibling::domain", entryCount: 3 } } } }]
+  when (as anonymous): GetStreamMetadata { streamId: "ws-sibling::domain" }
+  predict success:
+    response 200 SdkResult { result: { streamId: "ws-sibling::domain", entryCount: 3 } }
+    wire has [http.request with WireCall { method: "POST", path: "/graphql", body: { query: matching "memoryStream" } }]
+
+scenario "peekStream rides memoryEntries with its limit":
+  given:
+    execute (as anonymous) AcquireToken { apiKey: "flmnt_sk_conn_sib1.s3cr3t-value_x" }
+    seed wire [wire.stub with WireCall { method: "STUB", path: "/graphql", body: { status: 200, data: { memoryEntries: [{ id: "e1" }] } } }]
+  when (as anonymous): PeekStream { streamId: "ws-sibling::domain", limit: 5 }
+  predict success:
+    response 200 SdkResult { result: [{ id: "e1" }] }
+    wire has [http.request with WireCall { method: "POST", path: "/graphql", body: { query: matching "memoryEntries", variables: { streamId: "ws-sibling::domain", limit: 5 } } }]
+
+scenario "searchEvents rides memorySearch":
+  given:
+    execute (as anonymous) AcquireToken { apiKey: "flmnt_sk_conn_sib1.s3cr3t-value_x" }
+    seed wire [wire.stub with WireCall { method: "STUB", path: "/graphql", body: { status: 200, data: { memorySearch: [{ id: "e2" }] } } }]
+  when (as anonymous): SearchEvents { streamId: "ws-sibling::domain", query: "redis outage" }
+  predict success:
+    response 200 SdkResult { result: [{ id: "e2" }] }
+    wire has [http.request with WireCall { method: "POST", path: "/graphql", body: { query: matching "memorySearch" } }]
+
+scenario "sliceEvents rides memorySlice":
+  given:
+    execute (as anonymous) AcquireToken { apiKey: "flmnt_sk_conn_sib1.s3cr3t-value_x" }
+    seed wire [wire.stub with WireCall { method: "STUB", path: "/graphql", body: { status: 200, data: { memorySlice: [{ id: "e3" }] } } }]
+  when (as anonymous): SliceEvents { streamId: "ws-sibling::domain", startPos: 0, endPos: 10 }
+  predict success:
+    response 200 SdkResult { result: [{ id: "e3" }] }
+    wire has [http.request with WireCall { method: "POST", path: "/graphql", body: { query: matching "memorySlice" } }]
+
+scenario "getNeighborhood rides memoryNeighborhood":
+  given:
+    execute (as anonymous) AcquireToken { apiKey: "flmnt_sk_conn_sib1.s3cr3t-value_x" }
+    seed wire [wire.stub with WireCall { method: "STUB", path: "/graphql", body: { status: 200, data: { memoryNeighborhood: { nodes: [] } } } }]
+  when (as anonymous): GetNeighborhood { streamId: "ws-sibling::domain", entryId: "e1", depth: 2 }
+  predict success:
+    response 200 SdkResult { result: { nodes: [] } }
+    wire has [http.request with WireCall { method: "POST", path: "/graphql", body: { query: matching "memoryNeighborhood" } }]
+
+scenario "readKeyframe rides memoryKeyframe":
+  given:
+    execute (as anonymous) AcquireToken { apiKey: "flmnt_sk_conn_sib1.s3cr3t-value_x" }
+    seed wire [wire.stub with WireCall { method: "STUB", path: "/graphql", body: { status: 200, data: { memoryKeyframe: { content: "state" } } } }]
+  when (as anonymous): ReadKeyframe { streamId: "ws-sibling::domain" }
+  predict success:
+    response 200 SdkResult { result: { content: "state" } }
+    wire has [http.request with WireCall { method: "POST", path: "/graphql", body: { query: matching "memoryKeyframe" } }]
+
+scenario "readPlan rides memoryPlan":
+  given:
+    execute (as anonymous) AcquireToken { apiKey: "flmnt_sk_conn_sib1.s3cr3t-value_x" }
+    seed wire [wire.stub with WireCall { method: "STUB", path: "/graphql", body: { status: 200, data: { memoryPlan: { content: "the plan" } } } }]
+  when (as anonymous): ReadPlan { streamId: "ws-sibling::plan" }
+  predict success:
+    response 200 SdkResult { result: { content: "the plan" } }
+    wire has [http.request with WireCall { method: "POST", path: "/graphql", body: { query: matching "memoryPlan" } }]

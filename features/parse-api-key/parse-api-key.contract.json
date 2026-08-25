@@ -1,0 +1,30 @@
+{
+  "$schema": "https://mmmnt.dev/feat/contract.schema.json",
+  "specId": "SPEC-SDK-001",
+  "schemas": {
+    "ParseApiKeyInput": {
+      "type": "object",
+      "required": ["apiKey"],
+      "properties": { "apiKey": { "type": "string" } },
+      "additionalProperties": false
+    },
+    "ParsedKey": {
+      "type": "object",
+      "required": ["clientId", "clientSecret"],
+      "properties": {
+        "clientId": { "type": "string" },
+        "clientSecret": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "SdkError": {
+      "type": "object",
+      "required": ["code", "message"],
+      "properties": {
+        "code": { "enum": ["SDK_KEY_MALFORMED", "SDK_EXCHANGE_REFUSED", "SDK_GRAPH_REFUSED", "SDK_NETWORK"] },
+        "message": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

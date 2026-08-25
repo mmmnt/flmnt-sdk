@@ -1,0 +1,8 @@
+node_modules/
+dist/
+coverage/
+reports/
+.feature/
+features/**/*.test.ts
+*.tsbuildinfo
+.turbo/

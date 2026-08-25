@@ -1,0 +1,45 @@
+feat 1.0
+
+spec SPEC-SDK-006 "Retrieval rides memoryQueryContext — a snapshot is the same operation with an empty query"
+context Sdk
+aggregate Memory
+type command
+status agreed
+
+construct:
+  handler at features/memory-retrieval/handler.ts
+  touches features/**
+  touches src/**
+  needs SPEC-SDK-003
+  queryContext and materializeContext both ride the engine RLM's memoryQueryContext operation
+  through the router, exactly as the MCP does (P6 cutover): materialize IS the snapshot tier —
+  the same operation with an empty query string. The TrajectoryResult passes through untouched.
+
+enforce:
+  materializeContext never invents a query — it sends the empty string, and the RLM decides
+  what a snapshot means.
+  The token budget rides as a variable; the SDK applies no client-side truncation.
+
+contract:
+  input QueryContextArgs
+  input MaterializeArgs
+  response SdkResult
+  record WireCall
+
+scenario "queryContext rides memoryQueryContext with the query":
+  given:
+    execute (as anonymous) AcquireToken { apiKey: "flmnt_sk_conn_sib1.s3cr3t-value_x" }
+    seed wire [wire.stub with WireCall { method: "STUB", path: "/graphql", body: { status: 200, data: { memoryQueryContext: { anchor: "e1", results: [] } } } }]
+  when (as anonymous): QueryContext { query: "why did the deploy fail", streamId: "ws-sibling::domain", tokenBudget: 4000 }
+  predict success:
+    response 200 SdkResult { result: { anchor: "e1", results: [] } }
+    wire has [http.request with WireCall { method: "POST", path: "/graphql", body: { query: matching "memoryQueryContext", variables: { query: "why did the deploy fail", tokenBudget: 4000, streamId: "ws-sibling::domain" } } }]
+
+scenario "materializeContext is the same operation with an empty query":
+  given:
+    execute (as anonymous) AcquireToken { apiKey: "flmnt_sk_conn_sib1.s3cr3t-value_x" }
+    seed wire [wire.stub with WireCall { method: "STUB", path: "/graphql", body: { status: 200, data: { memoryQueryContext: { anchor: "", results: [] } } } }]
+  when (as anonymous): MaterializeContext { tokenBudget: 4000 }
+  predict success:
+    response 200 SdkResult { result: { anchor: "", results: [] } }
+    wire has [http.request with WireCall { method: "POST", path: "/graphql", body: { query: matching "memoryQueryContext", variables: { query: "", tokenBudget: 4000 } } }]

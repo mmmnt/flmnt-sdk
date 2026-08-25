@@ -1,0 +1,52 @@
+{
+  "name": "@mmmnt/flmnt-sdk",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "The flmnt SDK \u2014 programmatic API-connection access to the memory plane",
+  "license": "BSD-3-Clause",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mmmnt/flmnt-sdk.git"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "feat": "feat lint && feat generate && feat audit && feat run"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.0",
+    "@mmmnt/feature": "^0.3.1",
+    "@mmmnt/feat-runtime": "^0.1.14",
+    "@mmmnt/feat-adapter-handler": "^0.1.7",
+    "@mmmnt/feat-schema-json": "^0.2.0"
+  },
+  "homepage": "https://github.com/mmmnt/flmnt-sdk#readme",
+  "bugs": {
+    "url": "https://github.com/mmmnt/flmnt-sdk/issues"
+  },
+  "keywords": [
+    "flmnt",
+    "memory",
+    "context",
+    "agent",
+    "sdk",
+    "mmmnt"
+  ]
+}

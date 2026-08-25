@@ -1,0 +1,113 @@
+{
+  "featVersion": "1.0",
+  "specs": {
+    "dir": "features",
+    "pattern": "**/*.feat",
+    "contractPattern": "**/*.contract.json",
+    "outputPattern": "{name}.test.ts"
+  },
+  "schemas": {
+    "adapter": "@mmmnt/feat-schema-json"
+  },
+  "response": {
+    "adapter": "@mmmnt/feat-adapter-handler",
+    "commands": {
+      "ParseApiKey": {
+        "module": "features/parse-api-key/handler.ts",
+        "export": "parseApiKey"
+      },
+      "AcquireToken": {
+        "module": "features/acquire-token/handler.ts",
+        "export": "acquireToken"
+      },
+      "QueryMemory": {
+        "module": "features/graph-transport/handler.ts",
+        "export": "queryMemory"
+      },
+      "ListStreams": {
+        "module": "features/memory-reads/handler.ts",
+        "export": "listStreams"
+      },
+      "GetStreamMetadata": {
+        "module": "features/memory-reads/handler.ts",
+        "export": "getStreamMetadata"
+      },
+      "PeekStream": {
+        "module": "features/memory-reads/handler.ts",
+        "export": "peekStream"
+      },
+      "SearchEvents": {
+        "module": "features/memory-reads/handler.ts",
+        "export": "searchEvents"
+      },
+      "SliceEvents": {
+        "module": "features/memory-reads/handler.ts",
+        "export": "sliceEvents"
+      },
+      "GetNeighborhood": {
+        "module": "features/memory-reads/handler.ts",
+        "export": "getNeighborhood"
+      },
+      "ReadKeyframe": {
+        "module": "features/memory-reads/handler.ts",
+        "export": "readKeyframe"
+      },
+      "ReadPlan": {
+        "module": "features/memory-reads/handler.ts",
+        "export": "readPlan"
+      },
+      "RecordEntry": {
+        "module": "features/memory-writes/handler.ts",
+        "export": "recordEntry"
+      },
+      "WriteKeyframe": {
+        "module": "features/memory-writes/handler.ts",
+        "export": "writeKeyframe"
+      },
+      "RecordMistake": {
+        "module": "features/memory-writes/handler.ts",
+        "export": "recordMistake"
+      },
+      "RecordSupersession": {
+        "module": "features/memory-writes/handler.ts",
+        "export": "recordSupersession"
+      },
+      "RecordPlan": {
+        "module": "features/memory-writes/handler.ts",
+        "export": "recordPlan"
+      },
+      "RecordMetric": {
+        "module": "features/memory-writes/handler.ts",
+        "export": "recordMetric"
+      },
+      "CreateStream": {
+        "module": "features/memory-writes/handler.ts",
+        "export": "createStream"
+      },
+      "QueryContext": {
+        "module": "features/memory-retrieval/handler.ts",
+        "export": "queryContext"
+      },
+      "MaterializeContext": {
+        "module": "features/memory-retrieval/handler.ts",
+        "export": "materializeContext"
+      }
+    },
+    "actors": {
+      "default": "anonymous"
+    }
+  },
+  "services": {
+    "wire": {
+      "adapter": "./adapters/feat-wire.ts",
+      "consistency": "strong"
+    }
+  },
+  "report": {
+    "format": [
+      "console",
+      "junit"
+    ],
+    "junitOutput": "reports/feat-junit.xml"
+  }
+}

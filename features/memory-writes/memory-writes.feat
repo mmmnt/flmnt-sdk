@@ -1,0 +1,98 @@
+feat 1.0
+
+spec SPEC-SDK-005 "Every typed write builds its router mutation and passes the receipt through untouched"
+context Sdk
+aggregate Memory
+type command
+status agreed
+
+construct:
+  handler at features/memory-writes/handler.ts
+  touches features/**
+  touches src/**
+  needs SPEC-SDK-003
+  The typed write surface mirrors the MCP's write tools over the router GraphQL mutations
+  (QRM-ADR-002 §8). The router is the sole policy-enforcement point — the SDK never
+  pre-authorizes, meters, or resolves stream ids beyond composing {workspaceId}::{type}
+  singletons the way the MCP does. Receipts pass through untouched.
+
+enforce:
+  A write method never fabricates a receipt — the response is the mutation's field value
+  verbatim, and a router refusal surfaces through SPEC-SDK-003's transport law.
+  recordMistake composes its singleton stream id ({workspaceId}::mistake) from the
+  CALLER-SUPPLIED workspace id — the SDK holds no ambient workspace; every other method
+  takes the full streamId the caller resolved.
+
+contract:
+  input RecordEntryArgs
+  input KeyframeWriteArgs
+  input MistakeArgs
+  input SupersessionArgs
+  input PlanWriteArgs
+  input MetricArgs
+  input CreateStreamArgs
+  response SdkResult
+  record WireCall
+
+scenario "recordEntry rides recordMemoryEntry":
+  given:
+    execute (as anonymous) AcquireToken { apiKey: "flmnt_sk_conn_sib1.s3cr3t-value_x" }
+    seed wire [wire.stub with WireCall { method: "STUB", path: "/graphql", body: { status: 200, data: { recordMemoryEntry: { entryId: "e-new" } } } }]
+  when (as anonymous): RecordEntry { streamId: "ws-sibling::domain", content: "Use PostgreSQL", kind: "decision", causalRefs: ["e0"] }
+  predict success:
+    response 200 SdkResult { result: { entryId: "e-new" } }
+    wire has [http.request with WireCall { method: "POST", path: "/graphql", body: { query: matching "recordMemoryEntry" } }]
+
+scenario "writeKeyframe rides writeMemoryKeyframe":
+  given:
+    execute (as anonymous) AcquireToken { apiKey: "flmnt_sk_conn_sib1.s3cr3t-value_x" }
+    seed wire [wire.stub with WireCall { method: "STUB", path: "/graphql", body: { status: 200, data: { writeMemoryKeyframe: { entryId: "k-new" } } } }]
+  when (as anonymous): WriteKeyframe { streamId: "ws-sibling::domain", content: "stable state" }
+  predict success:
+    response 200 SdkResult { result: { entryId: "k-new" } }
+    wire has [http.request with WireCall { method: "POST", path: "/graphql", body: { query: matching "writeMemoryKeyframe" } }]
+
+scenario "recordMistake composes the mistake singleton and rides recordMemoryMistake":
+  given:
+    execute (as anonymous) AcquireToken { apiKey: "flmnt_sk_conn_sib1.s3cr3t-value_x" }
+    seed wire [wire.stub with WireCall { method: "STUB", path: "/graphql", body: { status: 200, data: { recordMemoryMistake: { entryId: "m-new" } } } }]
+  when (as anonymous): RecordMistake { workspaceId: "ws-sibling", content: "wrong region; fixed", wasCorrected: true }
+  predict success:
+    response 200 SdkResult { result: { entryId: "m-new" } }
+    wire has [http.request with WireCall { method: "POST", path: "/graphql", body: { query: matching "recordMemoryMistake", variables: { streamId: "ws-sibling::mistake" } } }]
+
+scenario "recordSupersession rides recordMemorySupersession":
+  given:
+    execute (as anonymous) AcquireToken { apiKey: "flmnt_sk_conn_sib1.s3cr3t-value_x" }
+    seed wire [wire.stub with WireCall { method: "STUB", path: "/graphql", body: { status: 200, data: { recordMemorySupersession: { entryId: "s-new" } } } }]
+  when (as anonymous): RecordSupersession { streamId: "ws-sibling::domain", content: "replaces e0", supersedes: "e0" }
+  predict success:
+    response 200 SdkResult { result: { entryId: "s-new" } }
+    wire has [http.request with WireCall { method: "POST", path: "/graphql", body: { query: matching "recordMemorySupersession" } }]
+
+scenario "recordPlan rides recordMemoryPlan":
+  given:
+    execute (as anonymous) AcquireToken { apiKey: "flmnt_sk_conn_sib1.s3cr3t-value_x" }
+    seed wire [wire.stub with WireCall { method: "STUB", path: "/graphql", body: { status: 200, data: { recordMemoryPlan: { entryId: "p-new" } } } }]
+  when (as anonymous): RecordPlan { streamId: "ws-sibling::plan", content: "burst plan" }
+  predict success:
+    response 200 SdkResult { result: { entryId: "p-new" } }
+    wire has [http.request with WireCall { method: "POST", path: "/graphql", body: { query: matching "recordMemoryPlan" } }]
+
+scenario "recordMetric rides recordMemoryMetric with labels as key-value pairs":
+  given:
+    execute (as anonymous) AcquireToken { apiKey: "flmnt_sk_conn_sib1.s3cr3t-value_x" }
+    seed wire [wire.stub with WireCall { method: "STUB", path: "/graphql", body: { status: 200, data: { recordMemoryMetric: { entryId: "mt-new" } } } }]
+  when (as anonymous): RecordMetric { streamId: "ws-sibling::metrics", metricName: "tokens", value: 42 }
+  predict success:
+    response 200 SdkResult { result: { entryId: "mt-new" } }
+    wire has [http.request with WireCall { method: "POST", path: "/graphql", body: { query: matching "recordMemoryMetric" } }]
+
+scenario "createStream rides createMemoryStream":
+  given:
+    execute (as anonymous) AcquireToken { apiKey: "flmnt_sk_conn_sib1.s3cr3t-value_x" }
+    seed wire [wire.stub with WireCall { method: "STUB", path: "/graphql", body: { status: 200, data: { createMemoryStream: { streamId: "ws-sibling::metrics" } } } }]
+  when (as anonymous): CreateStream { projectId: "ws-sibling", streamType: "metrics", name: "metrics" }
+  predict success:
+    response 200 SdkResult { result: { streamId: "ws-sibling::metrics" } }
+    wire has [http.request with WireCall { method: "POST", path: "/graphql", body: { query: matching "createMemoryStream" } }]

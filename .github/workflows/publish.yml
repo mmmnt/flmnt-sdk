@@ -1,0 +1,58 @@
+name: Publish
+
+# The SDK versions by annotated v{X.Y.Z} tags (tag only on a green commit) and publishes via
+# npm OIDC trusted publishing. npm-side trust is configured on npmjs.com
+# (@mmmnt/flmnt-sdk -> mmmnt/flmnt-sdk + this workflow file); no long-lived token exists
+# anywhere. Publishing is CHANGED-ONLY: an already-published version is an idempotent skip,
+# never an error. This is a public source repo, so trusted publishing attaches provenance.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    name: gate · publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+      - run: pnpm install --frozen-lockfile
+      - name: Tag matches the package version
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          PKG_VERSION="$(node -p "require('./package.json').version")"
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match package version $PKG_VERSION"
+            exit 1
+          fi
+      - name: Spec chain
+        env:
+          FEAT_ENVIRONMENT: ci
+        run: |
+          npx feat lint
+          npx feat generate
+          npx feat audit
+          npx feat run
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+      - name: Publish (changed-only, OIDC trusted publishing)
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          if npm view "@mmmnt/flmnt-sdk@${VERSION}" version >/dev/null 2>&1; then
+            echo "@mmmnt/flmnt-sdk@${VERSION} already published — idempotent skip."
+            exit 0
+          fi
+          npm publish
