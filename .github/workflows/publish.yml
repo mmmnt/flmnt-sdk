@@ -55,4 +55,10 @@ jobs:
             echo "@mmmnt/flmnt-sdk@${VERSION} already published — idempotent skip."
             exit 0
           fi
-          npm publish
+          if ! OUT="$(npm publish 2>&1)"; then
+            echo "$OUT"
+            # The view-guard can race registry propagation; publish-over is the same idempotent case.
+            echo "$OUT" | grep -q "cannot publish over" && { echo "already published — idempotent skip."; exit 0; }
+            exit 1
+          fi
+          echo "$OUT"
