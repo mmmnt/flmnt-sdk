@@ -7,7 +7,7 @@ no MCP server, no interactive OAuth. One key, one exchange, typed methods.
 import { connect, acquireToken, queryContext, recordEntry } from '@mmmnt/flmnt-sdk';
 
 connect({
-  brokerTokenUrl: 'https://oauth.production.flmnt.ai/token',
+  brokerTokenUrl: 'https://oauth.production.mmmnt.ai/token',
   graphqlUrl: 'https://api.production.flmnt.ai/graphql',
 });
 await acquireToken(process.env.FLMNT_API_KEY);
